@@ -12,7 +12,7 @@ const LOGLEVEL = log.InfoLevel
 
 const (
         VERMAJOR        = "00"
-        VERMINOR        = "01"
+        VERMINOR        = "02"
         VERSION         = VERMAJOR + "." + VERMINOR
 
         MINVER          = 1

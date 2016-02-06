@@ -14,7 +14,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/docker/docker/pkg/sockets"
+	"github.com/docker/go-connections/sockets"
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/muthur/horcrux"
@@ -153,9 +153,16 @@ type DockerRequest struct {
 	Options map[string]string `json:"Opts, omitempty"`
 }
 
+type DockerVolume struct {
+	Name		string		`json:"Name"`
+	MntPoint	string		`json:"Mountpoint"`
+}
+
 type DockerResponse struct {
-	MntPoint string `json:"Mountpoint"`
-	Err      string `json:"Err"`
+	MntPoint	string		`json:"Mountpoint"`
+	Volume		DockerVolume	`json:"Volume"`
+	VolumeList	[]DockerVolume	`json:"Volumes"`
+	Err		string		`json:"Err"`
 }
 
 func getDockerRequest(w http.ResponseWriter, r *http.Request) (*DockerRequest, error) {
@@ -189,11 +196,13 @@ type DockerPluginHandles struct {
 const activateEndPoint = "/Plugin.Activate"
 
 var Handles = []DockerPluginHandles{
-	{"/VolumeDriver.Create", CreateHandler},
-	{"/VolumeDriver.Remove", RemoveHandler},
-	{"/VolumeDriver.Mount", MountHandler},
-	{"/VolumeDriver.Unmount", UnmountHandler},
-	{"/VolumeDriver.Path", PathHandler}}
+	{"/VolumeDriver.Create",	CreateHandler},
+	{"/VolumeDriver.Remove",	RemoveHandler},
+	{"/VolumeDriver.Mount",		MountHandler},
+	{"/VolumeDriver.Unmount",	UnmountHandler},
+	{"/VolumeDriver.Path",		PathHandler},
+	{"/VolumeDriver.Get",		GetHandler},
+	{"/VolumeDriver.List",		ListHandler}}
 
 func ActivateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
@@ -359,6 +368,32 @@ func PathHandler(req *DockerRequest) *DockerResponse {
 
 	log.Infof("Path for volume %v", v)
 	return &DockerResponse{MntPoint: v.MntDir}
+}
+
+func GetHandler(req *DockerRequest) *DockerResponse {
+	VolData.lock.RLock()
+	v, ok := VolData.Volumes[req.Name]
+	VolData.lock.RUnlock()
+
+	if !ok {
+		return &DockerResponse{Err:"Volume " + req.Name + " not found"}
+	}
+
+	dv := DockerVolume{Name:v.DvName, MntPoint:v.MntDir}
+	return &DockerResponse{Volume:dv, Err:""}
+}
+
+func ListHandler(req *DockerRequest) *DockerResponse {
+	var dvlist []DockerVolume
+
+	VolData.lock.RLock()
+	defer VolData.lock.RUnlock()
+
+	for _, v := range VolData.Volumes {
+		dvlist = append(dvlist, DockerVolume{Name:v.DvName, MntPoint:v.MntDir})
+	}
+
+	return &DockerResponse{VolumeList:dvlist, Err:""}
 }
 
 func unmountAllVols() {
