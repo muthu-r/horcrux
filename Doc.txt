@@ -1,0 +1,27 @@
+
+Horcrux
+-------
+
+Reducto:
+	- Create Local Horcrux
+
+	Disperso:
+		- Puts them in different places (may be manual to begin with)
+
+Revelo:
+	- Client facing
+	- FS Layer, local FS (FUSE)
+	- Uses Accio and makes it visible to users
+
+Accio:
+	- Gets chunks for Revelo
+	- Checks them for integrity
+	- Puts them locally in WORKDIR
+
+Accio Backends
+	- cp (Locket)
+	- scp (Nagini)
+	- aws
+	- azure
+	- gcloud
+
