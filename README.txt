@@ -124,7 +124,10 @@ Need Help:
 
 Release Notes:
 --------------
-* Version 00.01
+* Version 00.02 (02/06/2016)
+  - Support for Docker 1.10+ volume plugin changes (Get, List)
+
+* Version 00.01 (02/05/2016)
 	- Supported access methods - CP, SCP, MINIO, AWS S3
 	- Tested only on Linux systems (Fedora, Ubuntu, CentOS)
 	- Versioning is not yet there (coming soon...)
