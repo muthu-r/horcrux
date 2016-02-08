@@ -21,7 +21,8 @@ Getting started
 ----------------
 1. Install Horcrux
   * Get the binary copy:
-    - (not yet, pls use the src)
+    - https://github.com/muthu-r/horcrux/tree/master/release
+
   * or source code:
     - http://github.com/muthu-r/horcrux
 

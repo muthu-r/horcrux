@@ -21,9 +21,9 @@ Getting started
 ----------------
 1. Install Horcrux
  * Get the binary copy:
-  	- ??
+  	- https://github.com/muthu-r/horcrux/tree/master/release
   or source code:
-  	- ??
+  	- https://github.com/muthu-r/horcrux
 
 2. To Generate Horcrux for your data, you need to do the "Reducto" spell on the system with data (good time to do a backup now :)
  * horcrux-cli generate <name> <in-dir> <out-dir>
