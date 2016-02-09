@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/muthur/horcrux"
+	"github.com/muthu-r/horcrux"
 )
 
 const MIN_KIDS = 100

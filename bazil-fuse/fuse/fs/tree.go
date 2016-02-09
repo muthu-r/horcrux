@@ -11,7 +11,7 @@ import (
 )
 
 import (
-	"github.com/muthur/horcrux/bazil-fuse/fuse"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse"
 )
 
 // A Tree implements a basic read-only directory tree for FUSE.

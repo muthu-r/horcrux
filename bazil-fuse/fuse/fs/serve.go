@@ -1,6 +1,6 @@
 // FUSE service loop, for servers that wish to use it.
 
-package fs // import "github.com/muthur/horcrux/bazil-fuse/fuse/fs"
+package fs // import "github.com/muthu-r/horcrux/bazil-fuse/fuse/fs"
 
 import (
 	"encoding/binary"
@@ -21,8 +21,8 @@ import (
 import (
 	"bytes"
 
-	"github.com/muthur/horcrux/bazil-fuse/fuse"
-	"github.com/muthur/horcrux/bazil-fuse/fuse/fuseutil"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse/fuseutil"
 )
 
 const (

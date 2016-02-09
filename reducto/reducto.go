@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/muthur/horcrux"
+	"github.com/muthu-r/horcrux"
 
 	log "github.com/Sirupsen/logrus"
 )

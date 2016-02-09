@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/muthur/bazil-fuse/fuse"
+	"github.com/muthu-r/bazil-fuse/fuse"
 )
 
 func TestOpenFlagsAccmodeMask(t *testing.T) {

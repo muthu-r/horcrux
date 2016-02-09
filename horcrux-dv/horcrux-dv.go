@@ -17,8 +17,8 @@ import (
 	"github.com/docker/go-connections/sockets"
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/muthur/horcrux"
-	"github.com/muthur/horcrux/revelo"
+	"github.com/muthu-r/horcrux"
+	"github.com/muthu-r/horcrux/revelo"
 )
 
 const (

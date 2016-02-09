@@ -20,19 +20,19 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/muthur/horcrux/bazil-fuse/fuse"
-	"github.com/muthur/horcrux/bazil-fuse/fuse/fs"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse/fs"
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/muthur/horcrux"
-	"github.com/muthur/horcrux/revelo/dirTree"
+	"github.com/muthu-r/horcrux"
+	"github.com/muthu-r/horcrux/revelo/dirTree"
 
-	"github.com/muthur/horcrux/accio"
-	"github.com/muthur/horcrux/accio/minio"
-	"github.com/muthur/horcrux/accio/cp"
-	"github.com/muthur/horcrux/accio/s3"
-	"github.com/muthur/horcrux/accio/scp"
+	"github.com/muthu-r/horcrux/accio"
+	"github.com/muthu-r/horcrux/accio/minio"
+	"github.com/muthu-r/horcrux/accio/cp"
+	"github.com/muthu-r/horcrux/accio/s3"
+	"github.com/muthu-r/horcrux/accio/scp"
 )
 
 type ReveloData struct {

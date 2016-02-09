@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/muthur/horcrux/bazil-fuse/fuse"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse"
 )
 
 type flagDebug bool

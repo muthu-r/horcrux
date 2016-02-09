@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/muthur/horcrux/bazil-fuse/fuse"
-	"github.com/muthur/horcrux/bazil-fuse/fuse/fs"
-	_ "github.com/muthur/horcrux/bazil-fuse/fuse/fs/fstestutil"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse"
+	"github.com/muthu-r/horcrux/bazil-fuse/fuse/fs"
+	_ "github.com/muthu-r/horcrux/bazil-fuse/fuse/fs/fstestutil"
 
 	"golang.org/x/net/context"
 )

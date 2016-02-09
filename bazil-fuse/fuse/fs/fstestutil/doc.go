@@ -1,1 +1,1 @@
-package fstestutil // import "github.com/muthur/horcrux/bazil-fuse/fuse/fs/fstestutil"
+package fstestutil // import "github.com/muthu-r/horcrux/bazil-fuse/fuse/fs/fstestutil"

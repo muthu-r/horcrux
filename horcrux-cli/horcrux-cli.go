@@ -18,9 +18,9 @@ import (
 	//	"github.com/codegangsta/cli"
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/muthur/horcrux"
-	"github.com/muthur/horcrux/reducto"
-	"github.com/muthur/horcrux/revelo"
+	"github.com/muthu-r/horcrux"
+	"github.com/muthu-r/horcrux/reducto"
+	"github.com/muthu-r/horcrux/revelo"
 )
 
 func Usage() {

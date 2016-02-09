@@ -17,12 +17,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muthur/bazil-fuse/fuse"
-	"github.com/muthur/bazil-fuse/fuse/fs"
-	"github.com/muthur/bazil-fuse/fuse/fs/fstestutil"
-	"github.com/muthur/bazil-fuse/fuse/fs/fstestutil/record"
-	"github.com/muthur/bazil-fuse/fuse/fuseutil"
-	"github.com/muthur/bazil-fuse/fuse/syscallx"
+	"github.com/muthu-r/bazil-fuse/fuse"
+	"github.com/muthu-r/bazil-fuse/fuse/fs"
+	"github.com/muthu-r/bazil-fuse/fuse/fs/fstestutil"
+	"github.com/muthu-r/bazil-fuse/fuse/fs/fstestutil/record"
+	"github.com/muthu-r/bazil-fuse/fuse/fuseutil"
+	"github.com/muthu-r/bazil-fuse/fuse/syscallx"
 
 	"golang.org/x/net/context"
 )

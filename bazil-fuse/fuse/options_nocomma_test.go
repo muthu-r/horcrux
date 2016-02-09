@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/muthur/bazil-fuse/fuse"
-	"github.com/muthur/bazil-fuse/fuse/fs/fstestutil"
+	"github.com/muthu-r/bazil-fuse/fuse"
+	"github.com/muthu-r/bazil-fuse/fuse/fs/fstestutil"
 
 )
 
