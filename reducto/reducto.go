@@ -9,7 +9,6 @@ package reducto
 
 import (
 	"encoding/json"
-	"fmt"
 	"golang.org/x/sys/unix"
 	"os"
 	"path"
@@ -21,31 +20,26 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-var Usage = func() {
-	fmt.Printf("Usage: reducto <name> <in-dir> <out-dir>\n")
-}
-
 // Splits a file into multiple chunks - returns number of chunks
-func split(Type int, inName string, outName string) (int64, error) {
-
+func split(Type int, chunkSz int, inName string, outName string) (int64, error) {
 	inFile, err := os.OpenFile(inName, os.O_RDONLY, 0)
 	if err != nil {
-		log.WithFields(log.Fields{"File": inName, "Error": err}).Error("Reducto: split - cannot open")
-		return -1, err
+		log.Errorf("Reducto: split - cannot open file %v, err: %v", inName, err)
+		return 0, err
 	}
 	defer inFile.Close()
 
 	fi, err := inFile.Stat()
 	if err != nil {
-		log.WithFields(log.Fields{"File": inName, "Error": err}).Error("Reducto: Cannot stat file")
-		return -1, err
+		log.Errorf("Reducto: Cannot stat file %v, err: %v", inName, err)
+		return 0, err
 	}
 
-	numChunks := int64((fi.Size() + horcrux.CHUNKSIZE - 1) / horcrux.CHUNKSIZE)
+	numChunks := (fi.Size() + int64(chunkSz) - 1) / int64(chunkSz)
+
 	log.WithFields(log.Fields{"File": inName, "Size": fi.Size(), "NumChunks": numChunks}).Debug("Reducto: splitting")
 
-	data := make([]byte, horcrux.CHUNKSIZE)
-
+	data := make([]byte, chunkSz)
 	for chunkIdx := int64(0); chunkIdx < numChunks; chunkIdx++ {
 		chunkName := outName + "." + strconv.FormatInt(chunkIdx, 10)
 		// TODO: See if we can pipe (or splice :))
@@ -57,7 +51,7 @@ func split(Type int, inName string, outName string) (int64, error) {
 				"chunkIdx": chunkIdx,
 				"Error":    err,
 			}).Error("Reducto: split - read failed")
-			return -1, err
+			return 0, err
 		}
 
 		if n == 0 {
@@ -73,7 +67,7 @@ func split(Type int, inName string, outName string) (int64, error) {
 				"Chunk Name":  chunkName,
 				"Error":       err,
 			}).Error("Reducto: split - cannot create chunk file")
-			return -1, err
+			return 0, err
 		}
 
 		n2, err := chunkFile.Write(data)
@@ -87,24 +81,45 @@ func split(Type int, inName string, outName string) (int64, error) {
 				"n2":        n2,
 				"Error":     err,
 			}).Error("Reducto: read (n), wrote (n2): Failed")
-			return -1, err
+			return 0, err
 		}
 	}
 
 	return numChunks, nil
 }
 
-func Reducto(Type int, Name, inPath string, outPath string) error {
-
+func Reducto(Type int, chunkSz int, Name, inPath string, outPath string) error {
 	inPath = path.Clean(inPath)
 	outPath = path.Clean(outPath)
 
 	log.WithFields(log.Fields{
 		"Version":  horcrux.VERSION,
 		"Type":     Type,
+		"Chunk Size": chunkSz,
 		"In File":  inPath,
 		"Out File": outPath,
 	}).Debug("Reducto")
+
+	stat, err := getStat(inPath)
+	if err != nil {
+		log.WithFields(log.Fields{"In File": inPath, "Error": err}).Error("Reducto: Cannot stat in path")
+		return err
+	}
+
+	if stat.Mode.IsDir() == false {
+		log.Errorf("Reducto: input %v has to be a directory", inPath)
+		return syscall.EINVAL
+	}
+
+	perm := stat.Mode.Perm()
+
+	if _, err := os.Stat(outPath); err == nil {
+		// Any other err captured later
+		log.Errorf("Reducto: out dir %v exists, not overwriting...", outPath)
+		return syscall.EEXIST
+	}
+
+	os.MkdirAll(outPath, perm)
 
 	metaFile, err := os.Create(outPath + "/" + Name + ".meta")
 	if err != nil {
@@ -116,40 +131,25 @@ func Reducto(Type int, Name, inPath string, outPath string) error {
 	}
 	defer metaFile.Close()
 
-	Config := horcrux.Config{Version: horcrux.VERSION, ChunkType: Type, ChunkSize: horcrux.CHUNKSIZE}
-
-	EntryList := []horcrux.Entry{}
-	stat, err := getStat(inPath)
-	if err != nil {
-		log.WithFields(log.Fields{"In File": inPath, "Error": err}).Error("Reducto: Cannot stat in file")
-		return err
-	}
-
-	Meta := &horcrux.Meta{}
-	numFiles := 1
-	prefix := ""
 	currVer := "v" + strconv.Itoa(horcrux.STARTVER)
 
-	if stat.Mode.IsDir() == false {
-		log.Errorf("Reducto: input %v has to be a directory", inPath)
-		return syscall.EINVAL
-	}
-
+	outPath = outPath + "/" + currVer
 	inBase := path.Base(inPath)
 	inDir := path.Dir(inPath)
-
-	perm := stat.Mode.Perm()
-	os.Mkdir(outPath, perm)
-
-	outPath = outPath + "/" + currVer
 	os.MkdirAll(outPath+"/"+inBase, perm)
+
+	Config := horcrux.Config{Version: horcrux.VERSION, ChunkType: Type, ChunkSize: chunkSz}
+	Meta := &horcrux.Meta{Config: Config, CurrVer: currVer}
+	prefix := ""
 
 	root := horcrux.Entry{Name: inBase,
 		Prefix:    prefix,
 		IsDir:     true,
 		Stat:      stat,
 		NumChunks: 1}
-	EntryList = append(EntryList, root)
+	EntryList := []horcrux.Entry{root}
+	numFiles := 1	// for root
+
 	dirList := []string{inBase}
 
 	for len(dirList) > 0 {
@@ -161,7 +161,7 @@ func Reducto(Type int, Name, inPath string, outPath string) error {
 				"inBase": inBase,
 				"Dir":    inDir + "/" + dir,
 				"Error":  err,
-			}).Error("Reducto: Cannot Open - Avoid trailing slash for now")
+			}).Error("Reducto: Cannot Open")
 			return err
 		}
 
@@ -212,7 +212,11 @@ func Reducto(Type int, Name, inPath string, outPath string) error {
 				dirList = append(dirList, dir+"/"+ent)
 				numChunks = 1	//XXX Should we make this 0?
 			} else {
-				numChunks, _ = split(Type, path, outPath+"/"+dir+"/"+ent)
+				numChunks, err = split(Type, chunkSz, path, outPath+"/"+dir+"/"+ent)
+				if err != nil {
+					log.Errorf("Split: Error splitting %v, err %v", outPath+"/"+dir+"/"+ent, err)
+					return err
+				}
 			}
 
 			EntryList = append(EntryList, horcrux.Entry{Name: ent,
@@ -224,14 +228,12 @@ func Reducto(Type int, Name, inPath string, outPath string) error {
 		}
 	}
 
-	Meta.Config = Config
-	Meta.CurrVer = currVer
 	Meta.NumFiles = numFiles
 	Meta.Entries = EntryList
 
 	js, err := json.MarshalIndent(Meta, "", "    ")
 	if err != nil {
-		log.WithFields(log.Fields{"Meta": Meta, "Error": err}).Error("Reducto: Cannot marshal metadata")
+		log.Errorf("Reducto: Cannot marshal metadata, err = %v", err)
 		return err
 	}
 

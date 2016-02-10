@@ -9,7 +9,6 @@ package revelo
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -52,14 +51,12 @@ type ReveloData struct {
 
 var GlobalData ReveloData
 
-var Usage = func() {
-	fmt.Printf("Usage: revelo <name> <access-type> <mnt-dir>\n" +
+const Usage =   "revelo <name> <access-type> <mnt-dir>\n" +
 		"            access-type is one of:\n" +
 		"                cp://<local-dir>\n" +
 		"                scp://user::passwd@host:/path\n" +
-		"                s3://bucket@region (credentials in ~/.s3/credentials)\n" +
-		"                minio://host:port/bucket (credentials in ~/.minio/horcrux.json)\n")
-}
+		"                s3://bucket@region (credentials in ~/.aws/credentials)\n" +
+		"                minio://host:port/bucket (credentials in ~/.minio/horcrux.json)\n"
 
 // Given a string <accType>://<args>, it returns accType, args
 func getAccessType(acc string) (string, string) {
@@ -104,7 +101,6 @@ func initAccess(accType string, mntDir string) (accio.Access, error) {
 		acc = &minio.Data{MinioArgs: args}
 	case "":
 		log.Error("Revelo - Bad Arguments")
-		Usage()
 		return nil, syscall.EINVAL
 	default:
 		log.WithFields(log.Fields{
@@ -298,6 +294,7 @@ type FILE struct {
 type HANDLE struct {
 	Acc *accio.Access
 	f   *FILE
+	chunkSz int
 }
 
 // Updates Entry in dirTree: old -> new
@@ -375,7 +372,7 @@ func saveMeta(acc *accio.Access, data *ReveloData) error {
 //
 
 // Creates a new chunk - extends file
-func createChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, error) {
+func createChunk(h *HANDLE, chunkIdx int64, buf []byte, off int, sz int) (int, error) {
 	var chFile *os.File
 	var err error
 	var wrote int
@@ -411,7 +408,7 @@ func createChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int,
 	}
 	defer chFile.Close()
 
-	wrote, err = chFile.WriteAt(buf, off)
+	wrote, err = chFile.WriteAt(buf, int64(off))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"ChunkName": cacheName,
@@ -427,7 +424,7 @@ func createChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int,
 }
 
 // Writes to an existing chunk
-func writeChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, error) {
+func writeChunk(h *HANDLE, chunkIdx int64, buf []byte, off int, sz int) (int, error) {
 	var chFile *os.File
 	var err error
 	var wrote int
@@ -457,7 +454,7 @@ func writeChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, 
 		}
 
 		// Check if its partial write
-		if sz < horcrux.CHUNKSIZE {
+		if sz < h.chunkSz {
 			// Get the chunk from remote
 			remoteName := h.f.remoteName + "." + strconv.FormatInt(chunkIdx, 10)
 			acc := *h.Acc
@@ -488,7 +485,7 @@ func writeChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, 
 	defer chFile.Close()
 
 	// Now we have the chunk or will be writing one
-	wrote, err = chFile.WriteAt(buf, off)
+	wrote, err = chFile.WriteAt(buf, int64(off))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"ChunkName": cacheName,
@@ -505,19 +502,23 @@ func writeChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, 
 
 // Write handler
 func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-	var chunkIdx, offInChunk, numChunks int64
+	var chunkIdx, numChunks int64
+	var offInChunk int
 
 	f := h.f
 	size := len(req.Data)
 	resp.Size = -1
 
+	chunkSz := h.chunkSz
+
 	// TODO: Use the masks!!
-	chunkIdx = int64(req.Offset / horcrux.CHUNKSIZE)
-	offInChunk = req.Offset - chunkIdx*horcrux.CHUNKSIZE
+	chunkIdx =  req.Offset / int64(chunkSz)
+	offInChunk = int(req.Offset - chunkIdx * int64(chunkSz))
 	newSize := req.Offset + int64(size)
 
 	log.WithFields(log.Fields{
 		"File":              f.cacheName,
+		"chunkSz":           chunkSz,
 		"chunkIdx":          chunkIdx,
 		"offInChunk":        offInChunk,
 		"numChunks in File": f.Entry.NumChunks,
@@ -526,16 +527,16 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 
 	remain := size
 	wrote := 0
-	toWrite := horcrux.CHUNKSIZE
+	toWrite := chunkSz
 
 	for (remain > 0) && (chunkIdx < f.Entry.NumChunks) {
 		if remain < toWrite {
 			toWrite = remain
 		}
 
-		if offInChunk+int64(toWrite) > horcrux.CHUNKSIZE {
+		if offInChunk + toWrite > chunkSz {
 			// Spans more than one chunk
-			toWrite -= int(offInChunk)
+			toWrite -= offInChunk
 		}
 
 		n, err := writeChunk(h, chunkIdx, req.Data[wrote:], offInChunk, toWrite)
@@ -543,6 +544,7 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 			log.WithFields(log.Fields{
 				"File":     f.cacheName,
 				"chunkIdx": chunkIdx,
+				"chunkSz":  chunkSz,
 				"OffSet":   offInChunk,
 				"Size":     toWrite,
 				"Wrote":    wrote,
@@ -553,7 +555,7 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 		}
 
 		offInChunk = 0
-		toWrite = horcrux.CHUNKSIZE
+		toWrite = chunkSz
 
 		wrote += n
 		remain -= n
@@ -595,7 +597,7 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 	}
 
 	// Extending file with new chunks
-	toWrite = horcrux.CHUNKSIZE
+	toWrite = chunkSz
 	for remain > 0 {
 		if remain < toWrite {
 			toWrite = remain
@@ -621,7 +623,7 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 
 	// update meta data
 	newSize = req.Offset + int64(size)
-	numChunks = int64((newSize + horcrux.CHUNKSIZE - 1) / horcrux.CHUNKSIZE)
+	numChunks = (newSize + int64(chunkSz) - 1) / int64(chunkSz)
 	if numChunks > f.Entry.NumChunks {
 		log.WithFields(log.Fields{
 			"OldSize":   f.Entry.Stat.Size,
@@ -651,8 +653,7 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 }
 
 // Reads from chunk
-func readChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, error) {
-
+func readChunk(h *HANDLE, chunkIdx int64, buf []byte, off int, sz int) (int, error) {
 	remoteName := h.f.remoteName + "." + strconv.FormatInt(chunkIdx, 10)
 	cacheName := h.f.cacheName + "." + strconv.FormatInt(chunkIdx, 10)
 
@@ -709,16 +710,17 @@ func readChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, e
 	defer chFile.Close()
 
 	// Sz can be less or more than CHUNKSIZE  //XXX Clean this up?
-	if sz < horcrux.CHUNKSIZE {
+	if sz < h.chunkSz {
 		buf = buf[:sz]
 	} else {
-		buf = buf[:horcrux.CHUNKSIZE]
+		buf = buf[:h.chunkSz]
 	}
 
-	read, err := chFile.ReadAt(buf, off)
+	read, err := chFile.ReadAt(buf, int64(off))
 	if err != nil && err != io.EOF {
 		log.WithFields(log.Fields{
 			"ChunkName": cacheName,
+			"ChunkSize": h.chunkSz,
 			"Off":       off,
 			"Size":      sz,
 			"Read":      read,
@@ -732,25 +734,27 @@ func readChunk(h *HANDLE, chunkIdx int64, buf []byte, off int64, sz int) (int, e
 }
 
 func (h *HANDLE) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	var chunkIdx, offInChunk, totalRead, numChunks int64
+	var chunkIdx, numChunks int64
+	var offInChunk, totalRead int
 
 	f := h.f
+	chunkSz := h.chunkSz
 
 	// TODO: Use the masks!!
-	chunkIdx = int64(req.Offset / horcrux.CHUNKSIZE)
-	offInChunk = req.Offset - chunkIdx*horcrux.CHUNKSIZE
-	numChunks = int64((req.Size + horcrux.CHUNKSIZE - 1) / horcrux.CHUNKSIZE)
+	chunkIdx = req.Offset / int64(chunkSz)
+	offInChunk = int(req.Offset - chunkIdx * int64(chunkSz))
+	numChunks = int64((req.Size + chunkSz - 1) / chunkSz)
 
 	if chunkIdx >= f.Entry.NumChunks || req.Size == 0 {
 		resp.Data = []byte{}
 		return nil
 	}
 
-	if chunkIdx+numChunks > f.Entry.NumChunks {
+	if chunkIdx + numChunks > f.Entry.NumChunks {
 		numChunks = f.Entry.NumChunks - chunkIdx
 	}
 
-	resp.Data = make([]byte, numChunks*horcrux.CHUNKSIZE)
+	resp.Data = make([]byte, int(numChunks) * chunkSz)
 	remain := req.Size
 	totalRead = 0
 	for i := int64(0); i < numChunks; i++ {
@@ -759,6 +763,7 @@ func (h *HANDLE) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.Rea
 			log.WithFields(log.Fields{
 				"File":     f.cacheName,
 				"chunkIdx": chunkIdx,
+				"chunkSz": chunkSz,
 				"Error":    err,
 			}).Error("Read: readChunk failed")
 			return err
@@ -767,7 +772,7 @@ func (h *HANDLE) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.Rea
 		offInChunk = 0
 
 		remain -= n
-		totalRead += int64(n)
+		totalRead += n
 
 		if err == io.EOF {
 			break
@@ -777,6 +782,7 @@ func (h *HANDLE) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.Rea
 
 	resp.Data = resp.Data[:totalRead]
 	log.WithFields(log.Fields{
+		"Chunk Size": chunkSz,
 		"File":   f.cacheName,
 		"Offset": req.Offset,
 		"Size":   req.Size,
@@ -835,7 +841,7 @@ func (f *FILE) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		return f.h, nil
 	}
 
-	h := &HANDLE{Acc: f.Acc, f: f}
+	h := &HANDLE{Acc: f.Acc, f:f, chunkSz: f.RData.Config.ChunkSize}
 	f.h = h
 
 	log.WithFields(log.Fields{
@@ -997,7 +1003,7 @@ func (d *DIR) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 		cacheName:  d.cacheDir + "/" + req.Name,
 		remoteName: ""}
 
-	h := &HANDLE{Acc: acc, f: f}
+	h := &HANDLE{Acc: acc, f: f, chunkSz: f.RData.Config.ChunkSize}
 	f.h = h
 
 	resp.LookupResponse.Attr = fuse.Attr{Mode: stat.Mode,
