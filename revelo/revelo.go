@@ -314,7 +314,7 @@ func updateMetaEntry(data *ReveloData, old horcrux.Entry, new horcrux.Entry) err
 }
 
 // Saves Meta data from dirTree to meta File
-func saveMeta(acc *accio.Access, data *ReveloData) error {
+func saveMeta(data *ReveloData) error {
 	var Meta *horcrux.Meta
 	var err error
 
@@ -567,14 +567,15 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 			// File size extended within chunk range
 			newEntry := f.Entry
 			newEntry.Stat.Size = newSize
-			if updateMetaEntry(f.RData, f.Entry, newEntry) != nil {
+			if err := updateMetaEntry(f.RData, f.Entry, newEntry); err != nil {
 				log.WithFields(log.Fields{"OldEntry": f.Entry,
 					"NewEntry": newEntry,
 				}).Error("writeChunk: updateMetaEntry Failed")
+				return err
 			}
 			f.Entry = newEntry
 
-			err := saveMeta(f.Acc, f.RData)
+			err := saveMeta(f.RData)
 			if err != nil {
 				log.Error("writeChunk: cannot update meta for new size")
 				return err
@@ -634,15 +635,16 @@ func (h *HANDLE) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.W
 		newEntry := f.Entry
 		newEntry.NumChunks = numChunks
 		newEntry.Stat.Size = newSize
-		if updateMetaEntry(f.RData, f.Entry, newEntry) != nil {
+		if err := updateMetaEntry(f.RData, f.Entry, newEntry); err != nil {
 			log.WithFields(log.Fields{"OldEntry": f.Entry,
 				"NewEntry": newEntry,
 			}).Error("writeChunk: updateMetaEntry Failed")
+			return err
 		}
 		f.Entry = newEntry
 	}
 
-	err := saveMeta(f.Acc, f.RData)
+	err := saveMeta(f.RData)
 	if err != nil {
 		log.Error("writeChunk: cannot update meta for new chunks")
 		return err
@@ -820,6 +822,81 @@ func (f *FILE) Attr(ctx context.Context, a *fuse.Attr) error {
 	return nil
 }
 
+func entrySetAttr(glbData *ReveloData, entry horcrux.Entry, req *fuse.SetattrRequest) (horcrux.Entry, error) {
+	var newEntry horcrux.Entry
+
+	valid := req.Valid
+
+	// XXX When do we get this one?
+	if valid.Handle() {
+		log.Errorf("Setattr Handle(??) for file %v", entry.Name)
+		return newEntry, syscall.EINVAL
+	}
+
+	// XXX TODO: Need to implement the following
+	if valid.Size() {
+		log.Errorf("Setattr Size for file %v, not supported for now", entry.Name)
+		return newEntry, syscall.ENOSYS
+	}
+	if valid.LockOwner() {
+		log.Errorf("Setattr Lock owner for file %v, not supported", entry.Name)
+		return newEntry, syscall.ENOSYS
+	}
+
+	// These, we might not support unless someone asks for it.
+	if valid.Atime() || valid.Mtime() || valid.AtimeNow() || valid.MtimeNow() {
+	     	log.Infof("Setattr {A,M}time* for file %v, not implemented yet", entry.Name)
+		return newEntry, syscall.ENOSYS
+	}
+
+	if valid.Crtime() || valid.Chgtime() || valid.Bkuptime() || valid.Flags() {
+	     	log.Errorf("Setattr OSX attr for file %v, not supported", entry.Name)
+		return newEntry, syscall.ENOSYS
+	}
+	
+	newEntry = entry
+	if valid.Mode() {
+		newEntry.Stat.Mode = req.Mode
+	}
+	if valid.Uid() {
+		newEntry.Stat.Uid = req.Uid
+	}
+	if valid.Gid() {
+		newEntry.Stat.Gid = req.Gid
+	}
+
+	if err := updateMetaEntry(glbData, entry, newEntry); err != nil {
+		log.WithFields(log.Fields{"OldEntry": entry,
+			"NewEntry": newEntry,
+		}).Error("Setattr: updateMetaEntry Failed")
+		return newEntry, err
+	}
+
+	if err := saveMeta(glbData); err != nil {
+		log.Error("Setattr: updateEntry: cannot save meta")
+		return newEntry, err
+	}
+
+	return newEntry, nil
+}
+
+func (f *FILE) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
+	log.Debugf("Setattr: Path %v, file %v, valid %v", f.Entry.Prefix, f.Entry.Name, req.Valid)
+
+	entry, err := entrySetAttr(f.RData, f.Entry, req)
+	if err != nil {
+		log.Errorf("Setattr: error %v", err)
+		return err
+	}
+
+	f.Entry = entry
+	resp.Attr.Mode = f.Entry.Stat.Mode
+	resp.Attr.Size = uint64(f.Entry.Stat.Size)
+	resp.Attr.Uid = f.Entry.Stat.Uid
+	resp.Attr.Gid = f.Entry.Stat.Gid
+	return nil
+}
+
 func (f *FILE) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 
 	log.WithFields(log.Fields{
@@ -887,6 +964,24 @@ func (d *DIR) Attr(ctx context.Context, attr *fuse.Attr) error {
 	attr.Size = uint64(stat.Size)
 	attr.Uid = stat.Uid
 	attr.Gid = stat.Gid
+	return nil
+}
+
+func (d *DIR) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
+	log.Debugf("Setattr: Path %v, file %v, valid %v", d.Entry.Prefix, d.Entry.Name, req.Valid)
+
+	entry, err := entrySetAttr(d.RData, d.Entry, req)
+	if err != nil {
+		log.Errorf("Setattr: error %v", err)
+		return err
+	}
+
+	d.Entry = entry
+
+	resp.Attr.Mode = d.Entry.Stat.Mode
+	resp.Attr.Size = uint64(d.Entry.Stat.Size)
+	resp.Attr.Uid = d.Entry.Stat.Uid
+	resp.Attr.Gid = d.Entry.Stat.Gid
 	return nil
 }
 
@@ -992,7 +1087,7 @@ func (d *DIR) Create(ctx context.Context, req *fuse.CreateRequest, resp *fuse.Cr
 		return nil, nil, err
 	}
 
-	if err := saveMeta(d.Acc, d.RData); err != nil {
+	if err := saveMeta(d.RData); err != nil {
 		log.Error("Revelo::Create: cannot update meta for create new file")
 		return nil, nil, err
 	}
@@ -1033,7 +1128,7 @@ func (d *DIR) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 		return err
 	}
 
-	if err := saveMeta(d.Acc, d.RData); err != nil {
+	if err := saveMeta(d.RData); err != nil {
 		log.Error("Remove: cannot update meta for remove file")
 		return err
 	}
@@ -1071,7 +1166,7 @@ func (d *DIR) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 		return nil, err
 	}
 
-	if err := saveMeta(d.Acc, d.RData); err != nil {
+	if err := saveMeta(d.RData); err != nil {
 		log.Error("Mkdir: save Meta  failed")
 		// XXX May be later save meta will work... either way, it will recover after restart
 		// d.RData.lock.Lock()
