@@ -65,21 +65,25 @@ func GetMeta(root *Node) (*horcrux.Meta, error) {
 	node := root
 	idx := 0
 	for node != nil {
+		/*
 		log.WithFields(log.Fields{
 			"Idx":    idx,
 			"Name":   node.Entry.Name,
 			"Prefix": node.Entry.Prefix,
 		}).Debug("Getting Entry")
+		*/
 
 		Meta.Entries = append(Meta.Entries, node.Entry)
 		idx++
 		for i := 0; i < node.numKids; i++ {
 			name := node.kidsArr[i]
 			n := node.kidsMap[name]
+			/*
 			log.WithFields(log.Fields{
 				"Entry Name":   n.Entry.Name,
 				"Entry Prefix": n.Entry.Prefix,
 			}).Debug("Queuing node..")
+			*/
 			q = enqueue(q, n)
 		}
 		q, node = dequeue(q)
@@ -270,7 +274,7 @@ func Update(root *Node, old horcrux.Entry, new horcrux.Entry) error {
 }
 
 // Delete dir/file with prefix dir in tree at root
-func Delete(root *Node, dir string, file string, isDir bool) error {
+func Delete(root *Node, dir string, file string, isDir bool) (*horcrux.Entry, error) {
 	var dirPrefix, dirName string
 
 	log.WithFields(log.Fields{"Root": root.Entry.Name, "Dir": dir, "File": file}).Debug("Delete:")
@@ -286,7 +290,7 @@ func Delete(root *Node, dir string, file string, isDir bool) error {
 
 	n, err := Lookup(root, dirPrefix, dirName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var i int
@@ -300,18 +304,18 @@ func Delete(root *Node, dir string, file string, isDir bool) error {
 		log.WithFields(log.Fields{
 			"Node pref": n.Entry.Prefix, "Node name": n.Entry.Name, "File": file,
 		}).Error("Delete: Node doesn't have file")
-		return syscall.ENOENT
+		return nil, syscall.ENOENT
 	}
 
 	k := n.kidsMap[file]
 	if isDir {
 		if k.Entry.IsDir == false {
 			log.Infof("Delete: entry %v is not a dir", k.Entry.Name)
-			return syscall.EINVAL
+			return nil, syscall.EINVAL
 		}
 		if k.numKids != 0 {
 			log.Infof("Delete: DIR entry %v is not empty", k.Entry.Name)
-			return syscall.ENOTEMPTY
+			return nil, syscall.ENOTEMPTY
 		}
 	}
 
@@ -319,7 +323,7 @@ func Delete(root *Node, dir string, file string, isDir bool) error {
 	delete(n.kidsMap, file)
 	n.numKids--
 
-	return nil
+	return &k.Entry, nil
 }
 
 // Create a dirTree from the flat Meta info

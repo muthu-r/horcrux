@@ -1,9 +1,10 @@
-/*
- * TODO:
- * 1. Preserve FILE, HANDLE across lookup, open, create
- * 	- Need this to support O_EXCL and other semantics
- * 	- Multiple simul access is not handled properly
- */
+//
+// TODO:
+// 1. Preserve FILE, HANDLE across lookup, open, create
+// 	- Need this to support O_EXCL and other semantics
+// 	- Multiple simul access is not handled properly
+// 2. Sparse files not supported
+// 3. Attr FLOCK
 
 package revelo
 
@@ -262,7 +263,6 @@ func Unmount(mntDir string) error {
 //
 // FUSE implementation (check bazil-fuse for the usage)
 // TODO: Make &FILE &DIR same across multiple access.
-// TODO: Clean up following structs - remove unused.
 type FS struct {
 	Acc   *accio.Access
 	RData *ReveloData
@@ -830,23 +830,19 @@ func entrySetAttr(glbData *ReveloData, entry horcrux.Entry, req *fuse.SetattrReq
 	// XXX When do we get this one?
 	if valid.Handle() {
 		log.Errorf("Setattr Handle(??) for file %v", entry.Name)
-		return newEntry, syscall.EINVAL
+		//XXX return newEntry, syscall.EINVAL
 	}
 
 	// XXX TODO: Need to implement the following
-	if valid.Size() {
-		log.Errorf("Setattr Size for file %v, not supported for now", entry.Name)
-		return newEntry, syscall.ENOSYS
-	}
 	if valid.LockOwner() {
+		//xxx returning error breaks some coreutils
 		log.Errorf("Setattr Lock owner for file %v, not supported", entry.Name)
-		return newEntry, syscall.ENOSYS
 	}
 
 	// These, we might not support unless someone asks for it.
 	if valid.Atime() || valid.Mtime() || valid.AtimeNow() || valid.MtimeNow() {
+		//xxx returning error breaks some coreutils
 	     	log.Infof("Setattr {A,M}time* for file %v, not implemented yet", entry.Name)
-		return newEntry, syscall.ENOSYS
 	}
 
 	if valid.Crtime() || valid.Chgtime() || valid.Bkuptime() || valid.Flags() {
@@ -855,6 +851,14 @@ func entrySetAttr(glbData *ReveloData, entry horcrux.Entry, req *fuse.SetattrReq
 	}
 	
 	newEntry = entry
+	if valid.Size() {
+		//XXX Not supporting sparse files fully - returning error breaks some coreutils
+		log.Errorf("Setattr Size for file %v, %v -> %v, sparse files not supported, disable it",
+			entry.Name, entry.Stat.Size, req.Size)
+		newEntry.Stat.Size = int64(req.Size)
+		newEntry.NumChunks = (newEntry.Stat.Size + int64(glbData.Config.ChunkSize) - 1)/int64(glbData.Config.ChunkSize)
+	}
+
 	if valid.Mode() {
 		newEntry.Stat.Mode = req.Mode
 	}
@@ -887,6 +891,17 @@ func (f *FILE) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 	if err != nil {
 		log.Errorf("Setattr: error %v", err)
 		return err
+	}
+
+	if entry.Stat.Size < f.Entry.Stat.Size {
+		lastChunkSize := entry.Stat.Size & int64(f.RData.Config.ChunkSize - 1)
+		if lastChunkSize > 0 {
+			os.Truncate(f.cacheName + "." + strconv.FormatInt(entry.NumChunks - 1, 10),
+					lastChunkSize)
+		}
+		for i:=entry.NumChunks; i<f.Entry.NumChunks; i++ {
+			os.Remove(f.cacheName + "." + strconv.FormatInt(i,10))
+		}
 	}
 
 	f.Entry = entry
@@ -1120,7 +1135,7 @@ func (d *DIR) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 	}
 
 	d.RData.lock.Lock()
-	err := dirTree.Delete(d.RData.Root, dirPrefix, req.Name, req.Dir)
+	remEntry, err := dirTree.Delete(d.RData.Root, dirPrefix, req.Name, req.Dir)
 	d.RData.lock.Unlock()
 
 	if err != nil {
@@ -1133,7 +1148,18 @@ func (d *DIR) Remove(ctx context.Context, req *fuse.RemoveRequest) error {
 		return err
 	}
 
-	//TODO:  Remove temp cache dir/files...
+	//Remove temp cache dir/files...
+	cacheName := d.cacheDir + "/" + req.Name
+	if req.Dir {
+		log.Debugf("Remove: Removing cache dir %v", cacheName)
+		os.Remove(cacheName)
+		return nil
+	}
+
+	log.Debugf("Remove: Removing cacheFiles %v.[0-%d]", cacheName, remEntry.NumChunks - 1)
+	for i:=int64(0); i<remEntry.NumChunks; i++ {
+		os.Remove(cacheName + "." + strconv.FormatInt(i, 10))
+	}
 	return nil
 }
 
