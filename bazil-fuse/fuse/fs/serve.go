@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	attrValidTime  = 0 * time.Minute	//RMK
-	entryValidTime = 0 * time.Minute	//RMK
+	attrValidTime  = 1 * time.Minute	//RMK
+	entryValidTime = 1 * time.Minute	//RMK
 )
 
 // TODO: FINISH DOCS
@@ -1039,6 +1039,7 @@ func (c *Server) serve(r fuse.Request) {
 			r.RespondError(err)
 			break
 		}
+
 		if err := c.saveLookup(ctx, s, snode, r.Name, n2); err != nil {
 			done(err)
 			r.RespondError(err)

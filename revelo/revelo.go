@@ -1000,7 +1000,7 @@ func (d *DIR) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.
 	return nil
 }
 
-func (d *DIR) Lookup(ctx context.Context, Name string) (fs.Node, error) {
+func (d *DIR) strLookup(ctx context.Context, Name string) (fs.Node, error) {
 
 	var dirPrefix string
 	if d.Entry.Prefix != "" {
@@ -1036,6 +1036,16 @@ func (d *DIR) Lookup(ctx context.Context, Name string) (fs.Node, error) {
 		remoteName: d.remoteDir + "/" + Name,
 		cacheName:  d.cacheDir + "/" + Name,
 		h:          nil}, nil
+}
+
+func (d *DIR) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
+	node, err := d.strLookup(ctx, req.Name)
+	if err != nil {
+		return node, err
+	}
+
+	err = node.Attr(ctx, &resp.Attr)
+	return node, err
 }
 
 func (d *DIR) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {

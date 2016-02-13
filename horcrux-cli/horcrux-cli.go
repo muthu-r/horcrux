@@ -189,7 +189,7 @@ var horCmds = []cli.Command {
 	},
 	{
 		Name:	"mount",
-		Aliases: []string{"m"},
+		Aliases: []string{"m", "mnt"},
 		Usage: "<name> <access-type> <mnt-dir>\n" +
 		       "   access-type is one of:\n" +
                        "       cp://full-path\n" +
