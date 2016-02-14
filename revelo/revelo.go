@@ -5,6 +5,7 @@
 // 	- Multiple simul access is not handled properly
 // 2. Sparse files not supported
 // 3. Attr FLOCK
+// 4. saveMeta - delay saving to absorb multiple changes
 
 package revelo
 
@@ -856,7 +857,9 @@ func entrySetAttr(glbData *ReveloData, entry horcrux.Entry, req *fuse.SetattrReq
 		log.Errorf("Setattr Size for file %v, %v -> %v, sparse files not supported, disable it",
 			entry.Name, entry.Stat.Size, req.Size)
 		newEntry.Stat.Size = int64(req.Size)
-		newEntry.NumChunks = (newEntry.Stat.Size + int64(glbData.Config.ChunkSize) - 1)/int64(glbData.Config.ChunkSize)
+		if newEntry.Stat.Size < entry.Stat.Size {
+			newEntry.NumChunks = (newEntry.Stat.Size + int64(glbData.Config.ChunkSize) - 1)/int64(glbData.Config.ChunkSize)
+		}
 	}
 
 	if valid.Mode() {
@@ -893,6 +896,7 @@ func (f *FILE) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 		return err
 	}
 
+	// Size truncate, so adjust numChunks
 	if entry.Stat.Size < f.Entry.Stat.Size {
 		lastChunkSize := entry.Stat.Size & int64(f.RData.Config.ChunkSize - 1)
 		if lastChunkSize > 0 {

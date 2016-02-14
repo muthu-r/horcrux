@@ -265,9 +265,11 @@ func Update(root *Node, old horcrux.Entry, new horcrux.Entry) error {
 		return err
 	}
 
+	/*
 	if n.Entry != old {
 		log.Fatal("Lookup Entry returned bad node")
 	}
+	*/
 
 	(*n).Entry = new
 	return nil
