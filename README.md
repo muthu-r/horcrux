@@ -150,11 +150,11 @@ If a developer wants to access the Horcrux, he/she needs to do the "Revelo" spel
 ![alt text][Docker Container Inspect V1]
 
 
-[Generate]: https://github.com/muthu-r/horcrux/Docs/Generate.png
-[Local Mount]: https://github.com/muthu-r/horcrux/Docs/LocalMount.png
-[Docker Volume Create]: https://github.com/muthu-r/horcrux/Docs/DockerVolumeCreate.png
-[Docker Container Create V1]: https://github.com/muthu-r/horcrux/Docs/DockerContainerCreateV1.png
-[Docker Container Inspect V1]:https://github.com/muthu-r/horcrux/Docs/DockerContainerInspectV1.png
+[Generate]: https://github.com/muthu-r/horcrux/blob/master/Docs/Generate.png
+[Local Mount]: https://github.com/muthu-r/horcrux/blob/master/Docs/LocalMount.png
+[Docker Volume Create]: https://github.com/muthu-r/horcrux/blob/master/Docs/DockerVolumeCreate.png
+[Docker Container Create V1]: https://github.com/muthu-r/horcrux/blob/master/Docs/DockerContainerCreateV1.png
+[Docker Container Inspect V1]: https://github.com/muthu-r/horcrux/blob/master/Docs/DockerContainerInspectV1.png
 
 ## That's pretty much it...
 
