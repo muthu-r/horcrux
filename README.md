@@ -31,10 +31,15 @@ We would like to call it a git for DB (but technically it is not the same :-), s
 Getting started
 ================
 Steps Overview:
+
 1. Install Horcrux
+
 2. Generate a Horcrux version for your central data
+
 3. Place the Horcrux version of your data anywhere you like (local servers within your LAN, AWS S3 etc). We suggest putting it in more than one place
+
 4. In the development or test environment: Create Docker volumes using Horcrux volume driver and specifying where the remote data is stored
+
 5. Now the volumes can be used within your containers as data volumes.
 
 #To Generate Horcrux version of the data:
@@ -118,6 +123,7 @@ If a developer wants to access the Horcrux, he/she needs to do the "Revelo" spel
    ```
    # chmod a+r /etc/fuse.conf
    ```
+
 ### Step 3: Start horcrux-dv volume plugin.
    ```
    # horcrux-dv >& /var/log/horcrux-dv.log &
