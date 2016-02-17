@@ -36,7 +36,7 @@ Steps Overview:
 
 2. Generate a Horcrux version for your central data
 
-3. Place the Horcrux version of your data anywhere you like (local servers within your LAN, AWS S3 etc). We suggest putting it in more than one place
+3. Place the Horcrux version of your data anywhere you like (local servers within your LAN, AWS S3 etc). We suggest putting it in more than one place. If you don't know yet, check out a cool project, [Minio](http://minio.io) object store server. It can be used to store Horcrux as well.
 
 4. In the development or test environment: Create Docker volumes using Horcrux volume driver and specifying where the remote data is stored
 
@@ -179,8 +179,8 @@ Happy hacking!!
 
 Muthukumar. R - m u t h u r AT g m a i l DOT c o m
 
-ACKNOWLEDMENTS
---------------
+ACKNOWLEDGEMENTS
+----------------
 Many thanks to:
  * [Docker folks](http://docker.io) for the excellent volume plugin interface and the documents - and answering my questions in #docker-dev
  * [Bazil folks](http://github.com/bazil/fuse) for their Go FUSE on top of which this is built.
