@@ -131,21 +131,30 @@ If a developer wants to access the Horcrux, he/she needs to do the "Revelo" spel
 ### Step 4: Create Docker volumes using Horcrux Volume driver
 
 * Docker volume __"v1"__ that uses SCP access from remote server __kural__
+
    ```
    - Here docker volume name is "v1"
+
    - "-d": specifies the Docker volume driver as horcrux
+
    - We use the -o to pass options to our horcrux volume driver
+
    - first option: "--name=AMCC", here we give the same name that was used in generate step
+
    - second option: "--access=scp://muthu@kural:/opt/horcrux-mysql-amcc" specifies the access method as SCP and the remote location as "kural:/opt/horcrux-mysql-amcc"
    ```
+
 * Docker volume __"v2"__ that uses AWS S3 as remote location
+
   ```
   - Here the bucket name is "muthu.horcrux"
+
   - Region is "us-west-1"
   ```
    <blockquote>
    NOTE: AWS credentials are in ~/.aws/credentials
    </blockquote>
+
  ![alt text][Docker Volume Create]
 
 ### Step 5: Create Docker containers with volume v1
