@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -270,6 +271,13 @@ func RemoveHandler(req *DockerRequest) *DockerResponse {
 	VolData.lock.Lock()
 	delete(VolData.Volumes, req.Name)
 	VolData.lock.Unlock()
+
+	// Cleanup cache
+	// Extra sanity: Make sure we are removing our files :)
+	if strings.HasPrefix(v.CacheDir, DV_WORKDIR) {
+		os.RemoveAll(v.CacheDir)
+		os.Remove(v.MntDir)
+	}
 
 	log.Infof("Removed volume %v", v)
 	listAllVols()
