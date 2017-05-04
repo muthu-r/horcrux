@@ -51,19 +51,19 @@ Horcrux consists of two binaries, _horcrux-cli_ and _horcrux-dv_
 
 Download the latest binary copy of __horcrux-cli__ from:
 
-####For Linux
-----------
+#### For Linux
+
  * [64-bit Intel/AMD](https://github.com/muthu-r/horcrux/tree/master/release/latest/linux/x86_64)
 
-####For OSX
---------
+#### For OSX
+
 * [64-bit Darwin](https://github.com/muthu-r/horcrux/tree/master/release/latest/OSX/x86_64)
 <blockquote>
 NOTE: Need help to generate binaries for OSX
 </blockquote>
 
-####From Source Code:
----------------------
+#### From Source Code:
+
 * [Horcrux GitHub](https://github.com/muthu-r/horcrux)
 
 ### Step 2: Generate Horcrux version of the data [Reducto Spell]
