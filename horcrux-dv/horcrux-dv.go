@@ -159,11 +159,16 @@ type DockerVolume struct {
 	MntPoint	string		`json:"Mountpoint"`
 }
 
+type Capability struct {
+    Scope       string      `json: "Scope"`
+}
+
 type DockerResponse struct {
-	MntPoint	string		`json:"Mountpoint"`
+	MntPoint	string		    `json:"Mountpoint"`
 	Volume		DockerVolume	`json:"Volume"`
 	VolumeList	[]DockerVolume	`json:"Volumes"`
-	Err		string		`json:"Err"`
+	Caps        Capability      `json:"Capabilities"`
+	Err			string			`json:"Err"`
 }
 
 func getDockerRequest(w http.ResponseWriter, r *http.Request) (*DockerRequest, error) {
@@ -203,7 +208,8 @@ var Handles = []DockerPluginHandles{
 	{"/VolumeDriver.Unmount",	UnmountHandler},
 	{"/VolumeDriver.Path",		PathHandler},
 	{"/VolumeDriver.Get",		GetHandler},
-	{"/VolumeDriver.List",		ListHandler}}
+	{"/VolumeDriver.List",		ListHandler},
+	{"/VolumeDriver.Capabilities",	CapHandler}}
 
 func ActivateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
@@ -404,6 +410,13 @@ func ListHandler(req *DockerRequest) *DockerResponse {
 	return &DockerResponse{VolumeList:dvlist, Err:""}
 }
 
+func CapHandler(req *DockerRequest) *DockerResponse {
+    var cap Capability
+
+    cap.Scope = "global"
+    return &DockerResponse{Caps:cap, Err:""}
+}
+
 func unmountAllVols() {
 	for _, v := range VolData.Volumes {
 		if v.mntCount > 0 {
@@ -494,7 +507,7 @@ func main() {
 //	log.WithFields(log.Fields{"Host": DV_HOST, "Port": DV_TCP_PORT}).Info("Listening...")
 
 	log.WithFields(log.Fields{"Socket": DV_SOCK_NAME}).Info("Listening...")
-	listener, err := sockets.NewUnixSocket(DV_SOCK_NAME, "docker")
+	listener, err := sockets.NewUnixSocket(DV_SOCK_NAME, os.Getgid())
 	if err != nil {
 		log.Errorf("dv: Cannot create unix socket %v, err %v", DV_SOCK_NAME, err)
 		return

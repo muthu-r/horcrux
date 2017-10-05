@@ -170,6 +170,19 @@ func WritebackCache() MountOption {
 	}
 }
 
+
+// AllowNonEmptyMount allows the mounting over a non-empty directory.
+//
+// The files in it will be shadowed by the freshly created mount. By
+// default these mounts are rejected to prevent accidental covering up
+// of data, which could for example prevent automatic backup.
+func AllowNonEmptyMount() MountOption {
+    return func(conf *mountConfig) error {
+        conf.options["nonempty"] = ""
+        return nil
+    }
+}
+
 // OSXFUSEPaths describes the paths used by an installed OSXFUSE
 // version. See OSXFUSELocationV3 for typical values.
 type OSXFUSEPaths struct {

@@ -92,6 +92,7 @@ func initAccess(accType string, mntDir string) (accio.Access, error) {
 	var acc accio.Access
 
 	md, args := getAccessType(accType)
+
 	switch md {
 	case "cp":
 		acc = &cp.Data{SrcDir: args}
@@ -221,10 +222,12 @@ func Revelo(Name string, accType string, cacheDir string, mntDir string) error {
 		fuse.Subtype("Horcrux-"+acc.Name()),
 		fuse.MaxReadahead(128 * (1 << 10)),
 		fuse.AllowOther()) //XXX : Revisit AllowOther
-	if err != nil {
+	
+    if err != nil {
 		log.WithFields(log.Fields{"Conn": fuseConn, "Error": err}).Error("Mount Failed")
 		return err
 	}
+
 	defer fuseConn.Close()
 
 	GlobalData.fuseConn = fuseConn
