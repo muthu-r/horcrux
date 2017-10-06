@@ -6,27 +6,26 @@ About Horcrux
 --------------
 Docker containers offer developers with the agility and flexibility of replicating the production/test setup in their development environment. So now, developers can develop features, unit test, fix issues in their local setup before pushing it to the test/production environment. Since containers are state-less, it can be moved anywhere easily, say within datacenter or into clouds etc. But in most cases, containers has to access/modify data that traditionally lives in a centralized storage. For example, one of the popular container stack LEMP, needs to access MySQL database. In order to access these data, Docker developed the concept of volume plugins, which can be associated with a container when it is created.
 
-Now the container can move to a different location as long as the volume plugin works there as well. This solves the problem in production/test cases, but if developers have to access the centralized data, that again restricts their flexibily. At the same time, with ever increasing size of data, it is not possible to give each developer a separate copy of the data (say database). That would be prohibitively expensive. To solve this, we give you __"Horcrux"__...
-
+Now the container can move to a different location as long as the volume plugin works there as well. This solves the problem in production/test cases, but if developers have to access the centralized data, that again restricts their flexibility. At the same time, with ever increasing size of data, it is not possible to give each developer a separate copy of the data (say database). That would be prohibitively expensive. To solve this, we give you __"Horcrux"__...
 
 What Horcrux provides?
 ------------
 * Horcrux provides you (developer) a local view of the whole centralized Data (database etc), so you can develop/test your application without worrying about messing up your precious central repository.
 * Centralized repository can be located anywhere (local servers that provide scp access, [Minio](http://minio.io) servers etc.) or in cloud (Amazon AWS S3, Microsoft Azure, Google Cloud etc.), so you are free to access it from anywhere (within your office, at home, in-flight (just kidding)...
 * The data volume is visible as a local FUSE filesystem in the developer/test environment.
-* When the data is accessed by the application (containers), only the particular chunk of data needed is fetched from the remote repository on-demand and stored locally (in the cache). The whole access is transparent to the applicaiton/container.
+* When the data is accessed by the application (containers), only the particular chunk of data needed is fetched from the remote repository on-demand and stored locally (in the cache). The whole access is transparent to the application/container.
 * Since only portion of data accessed is retrieved and stored locally, you don't have to buy terabytes of storage for each developers setup or test machine.
 * When the working data set is accessed next time around, it is served from the local cache, blazingly fast (almost, as fast as the local file system/storage :))
-* The local view provided by Horcrux is a read/write view, so the application/container can modify the data locally.
-* and can view, at any time, what is changed.
+* The local view provided by Horcrux is a read/write view, so the application/container can modify the data locally...
+* ...and can view, at any time, what has changed.
 
 In future versions, we will add git like capabilities, so you can:
 * Commit the local changes, and push it to the centralized repo with a comment (only modified portion is pushed).
-* Browse through changes in the remote repository and,
-* Access (mount) any version of remote data locally (roll back/forward) to develop/ troubleshoot issues with ease.
+* Browse through changes in the remote repository and...
+* ...access (mount) any version of remote data locally (roll back/forward) to develop/ troubleshoot issues with ease.
 * Bestof all, you don't have to do any evil spell (just a few good ones).
 
-We would like to call it a git for DB (but technically it is not the same :), since it will provide all git compatible commands (may even provide a git extension) so you can do pretty much all things with your data that you are already doing with git for your source code.
+We would like to call it a git for DB (but technically it is not the same :), since it will provide all git compatible commands (may even provide a git extension) so you can do pretty much everything with your data that you are already doing with git for your source code.
 
 Getting started
 ================
