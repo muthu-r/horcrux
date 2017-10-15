@@ -1,0 +1,53 @@
+{
+  "description": "Horcrux volume plugin for Docker",
+  "documentation": "https://docs.docker.com/engine/extend/plugins/",
+  "entrypoint": [
+    "/horcrux-dv"
+  ],
+  "interface": {
+    "socket": "horcrux.sock",
+    "types": [
+      "docker.volumedriver/1.0"
+    ]
+  },
+  "linux": {
+    "capabilities": [
+      "CAP_SYS_ADMIN"
+    ],
+    "devices": [
+      {
+        "path": "/dev/fuse"
+      }
+    ]
+  },
+  "mounts": [
+    {
+      "destination": "/run/horcrux/state",
+      "options": [
+        "rbind"
+      ],
+      "name": "state",
+      "source": "/var/lib/docker/plugins/",
+      "settable": [
+        "source"
+      ],
+      "type": "bind"
+    },
+    {
+      "destination": "/root/.ssh",
+      "options": [
+        "rbind"
+       ],
+       "name": "sshkey",
+       "source":"",
+       "settable": [
+          "source"
+        ],
+        "type":"bind"
+    }
+  ],
+  "network": {
+    "type": "host"
+  },
+  "propagatedmount": "/run/horcrux/"
+}

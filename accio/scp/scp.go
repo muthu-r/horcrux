@@ -12,6 +12,7 @@ package scp
 import (
 	"bytes"
 	"fmt"
+    "net"
 	"golang.org/x/crypto/ssh"
 	"os"
 	"os/user"
@@ -136,7 +137,13 @@ func (D *Data) Init() (string, error) {
 		auth = []ssh.AuthMethod{ssh.Password(D.Passwd)}
 	}
 
-	cfg := &ssh.ClientConfig{User: usr.Username, Auth: auth}
+    hostKeyCB := func(hostname string,
+                        remote net.Addr,
+                        key ssh.PublicKey) error {
+                  return nil
+                }
+
+	cfg := &ssh.ClientConfig{User: usr.Username, Auth: auth, HostKeyCallback: hostKeyCB}
 
 	client, err := ssh.Dial("tcp", D.Host+":22", cfg)
 	if err != nil {

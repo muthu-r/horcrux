@@ -30,7 +30,8 @@ import (
 	"github.com/muthu-r/horcrux/revelo/dirTree"
 
 	"github.com/muthu-r/horcrux/accio"
-	"github.com/muthu-r/horcrux/accio/minio"
+// TODO: fix minio compile error
+//	"github.com/muthu-r/horcrux/accio/minio"
 	"github.com/muthu-r/horcrux/accio/cp"
 	"github.com/muthu-r/horcrux/accio/s3"
 	"github.com/muthu-r/horcrux/accio/scp"
@@ -79,8 +80,8 @@ func getAccessType(acc string) (string, string) {
 		return "scp", acc[Idx+3:]
 	case "s3":
 		return "s3", acc[Idx+3:]
-	case "minio":
-		return "minio", acc[Idx+3:]
+//	case "minio":
+//		return "minio", acc[Idx+3:]
 	}
 
 	return acc[:Idx], acc[Idx+3:]
@@ -100,8 +101,8 @@ func initAccess(accType string, mntDir string) (accio.Access, error) {
 		acc = &scp.Data{ScpArgs: args}
 	case "s3":
 		acc = &s3.Data{S3Args: args}
-	case "minio":
-		acc = &minio.Data{MinioArgs: args}
+//	case "minio":
+//		acc = &minio.Data{MinioArgs: args}
 	case "":
 		log.Error("Revelo - Bad Arguments")
 		return nil, syscall.EINVAL

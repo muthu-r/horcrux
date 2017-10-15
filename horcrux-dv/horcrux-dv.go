@@ -25,6 +25,7 @@ import (
 const (
 	DV_WORKDIR       = "/run/horcrux"
 	DV_VERSION       = "0.1"
+    DV_PRESERVED_DIR = "/run/horcrux"
 	DV_VOL_LIST_FILE = "vols.lst"
 	DV_VOL_MIN       = 100
 	DV_SOCK_PATH	 = "/run/docker/plugins"
@@ -473,7 +474,7 @@ func main() {
 
 	err := os.MkdirAll(DV_SOCK_PATH, 0700)
 
-	VolData.volFileName = DV_WORKDIR + "/" + DV_VOL_LIST_FILE
+	VolData.volFileName = DV_PRESERVED_DIR + "/" + DV_VOL_LIST_FILE
 
 	VolData.Volumes = make(map[string]Volume, DV_VOL_MIN)
 	err = readVols()
