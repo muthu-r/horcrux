@@ -34,6 +34,18 @@
       "type": "bind"
     },
     {
+      "destination": "/root/.aws",
+      "options": [
+        "rbind"
+       ],
+       "name": "aws-credentials",
+       "source":"",
+       "settable": [
+          "source"
+        ],
+        "type":"bind"
+    },
+    {
       "destination": "/root/.ssh",
       "options": [
         "rbind"
