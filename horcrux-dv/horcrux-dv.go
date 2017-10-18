@@ -24,7 +24,7 @@ import (
 
 const (
 	DV_WORKDIR       = "/run/horcrux"
-	DV_VERSION       = "0.1"
+	DV_VERSION       = horcrux.VERSION
     DV_PRESERVED_DIR = "/run/horcrux"
 	DV_VOL_LIST_FILE = "vols.lst"
 	DV_VOL_MIN       = 100
@@ -514,6 +514,8 @@ func main() {
 		return
 	}
 	defer os.Remove(DV_SOCK_NAME)
+
+	log.WithFields(log.Fields{"Version": DV_VERSION}).Info("Horcrux Volume plugin started...")
 
 	err = http.Serve(listener, nil)
 	if err != nil {
